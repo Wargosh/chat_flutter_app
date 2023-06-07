@@ -24,7 +24,7 @@ class LoginPage extends StatelessWidget {
                   title: 'Inicia sesion',
                 ),
                 _Form(),
-                LoginBottomContainer(
+                const LoginBottomContainer(
                   routeToNevigate: 'register',
                   title: 'Aun no tienes una cuenta?',
                   subtitle: 'Crear una cuenta',
