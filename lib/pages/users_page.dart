@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
+import 'package:chat_flutter_app/routes/routes.dart';
 import 'package:chat_flutter_app/models/user.dart';
+import 'package:chat_flutter_app/services/auth_service.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});
@@ -27,25 +30,35 @@ class _UsersPageState extends State<UsersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.user!;
+
     return Scaffold(
         appBar: AppBar(
           title: Text(
-            'Username',
-            style: TextStyle(color: Colors.black54),
+            user.username,
+            style: const TextStyle(color: Colors.black54),
           ),
           elevation: 1,
           backgroundColor: Colors.white,
           leading: IconButton(
-            onPressed: () {},
-            icon: Icon(
+            onPressed: () {
+              // TODO: disconnect socket server
+
+              if (!context.mounted) return;
+
+              AuthService.deleteToken();
+              Navigator.pushReplacementNamed(context, Routes.loginPage);
+            },
+            icon: const Icon(
               Icons.exit_to_app,
               color: Colors.black87,
             ),
           ),
           actions: [
             Container(
-              margin: EdgeInsets.only(right: 10),
-              child: Icon(
+              margin: const EdgeInsets.only(right: 10),
+              child: const Icon(
                 Icons.offline_bolt_outlined,
                 color: Colors.red,
               ),
@@ -55,7 +68,7 @@ class _UsersPageState extends State<UsersPage> {
         body: SmartRefresher(
           controller: _refreshController,
           onRefresh: _loadUsers,
-          header: WaterDropHeader(
+          header: const WaterDropHeader(
             complete: Icon(
               Icons.check,
               color: Colors.green,

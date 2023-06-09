@@ -1,9 +1,13 @@
-import 'package:chat_flutter_app/widgets/custom_button.dart';
-import 'package:chat_flutter_app/widgets/login_bottom.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:chat_flutter_app/widgets/custom_logo.dart';
 import 'package:chat_flutter_app/widgets/custom_input.dart';
+import 'package:chat_flutter_app/widgets/custom_button.dart';
+import 'package:chat_flutter_app/widgets/login_bottom.dart';
+
+import 'package:chat_flutter_app/services/auth_service.dart';
+import 'package:chat_flutter_app/helpers/show_alert.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -49,6 +53,8 @@ class __FormState extends State<_Form> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
     return Container(
       margin: const EdgeInsets.only(top: 40),
       padding: const EdgeInsets.symmetric(horizontal: 50),
@@ -68,9 +74,25 @@ class __FormState extends State<_Form> {
           ),
           CustomButton(
             text: 'Conectar',
-            onPress: () {
-              print('object');
-            },
+            isLoading: authService.isLoading,
+            onPress: authService.isLoading
+                ? () {}
+                : () async {
+                    // Dispose any focused input selected (for hidden mobile keyboard)
+                    FocusScope.of(context).unfocus();
+
+                    final result = await authService.login(
+                      emailController.text.trim(),
+                      passController.text.trim(),
+                    );
+
+                    if (result == 'OK') {
+                      //TODO: Connect to socket server
+                      Navigator.pushReplacementNamed(context, 'users');
+                    } else {
+                      showAlert(context, 'Atención', result);
+                    }
+                  },
           ),
         ],
       ),

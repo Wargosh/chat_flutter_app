@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CustomButton extends StatelessWidget {
   final String text;
   final Function() onPress;
+  final bool isLoading;
   final Color backgroundColor;
   final Color textColor;
   final double radius;
@@ -13,6 +14,7 @@ class CustomButton extends StatelessWidget {
     super.key,
     required this.text,
     required this.onPress,
+    this.isLoading = false,
     this.backgroundColor = Colors.blue,
     this.textColor = Colors.white,
     this.radius = 10,
@@ -32,13 +34,15 @@ class CustomButton extends StatelessWidget {
       child: MaterialButton(
         onPressed: onPress,
         child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: textSize,
-            ),
-          ),
+          child: !isLoading
+              ? Text(
+                  text,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: textSize,
+                  ),
+                )
+              : const CircularProgressIndicator(color: Colors.white),
         ),
       ),
     );
