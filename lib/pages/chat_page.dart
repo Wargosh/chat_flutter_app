@@ -1,5 +1,12 @@
-import 'package:chat_flutter_app/widgets/chat_message.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:chat_flutter_app/constants/constants.dart';
+import 'package:chat_flutter_app/models/messages_response.dart';
+import 'package:chat_flutter_app/services/auth_service.dart';
+import 'package:chat_flutter_app/services/chat_service.dart';
+import 'package:chat_flutter_app/services/socket_service.dart';
+import 'package:chat_flutter_app/widgets/chat_message.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -12,9 +19,26 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
 
+  late ChatService chatService;
+  late SocketService socketService;
+  late AuthService authService;
+
   List<ChatMessage> _messages = [];
 
   bool _isTyping = false;
+
+  @override
+  void initState() {
+    chatService = Provider.of<ChatService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
+
+    socketService.socket.on(Constants.MSG_PRIVATE, _listenMessageFromServer);
+
+    _loadHistory(chatService.userTarget.uid);
+
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -29,22 +53,24 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final userTarget = chatService.userTarget;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Column(
           children: [
             CircleAvatar(
-              child: Text(
-                'Te',
-                style: const TextStyle(fontSize: 12),
-              ),
               backgroundColor: Colors.amber[300],
               maxRadius: 14,
+              child: Text(
+                userTarget.username.substring(0, 2).toUpperCase(),
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
             const SizedBox(height: 3),
             Text(
-              'Test username',
+              userTarget.username,
               style: const TextStyle(
                 color: Colors.black87,
                 fontSize: 12,
@@ -55,26 +81,22 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         centerTitle: true,
         elevation: 1,
       ),
-      body: Container(
-        child: Column(
-          children: [
-            Flexible(
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: _messages.length,
-                itemBuilder: (_, i) => _messages[i],
-                reverse: true,
-              ),
+      body: Column(
+        children: [
+          Flexible(
+            child: ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              itemCount: _messages.length,
+              itemBuilder: (_, i) => _messages[i],
+              reverse: true,
             ),
-            Divider(height: 1),
-
-            // TODO: text input
-            Container(
-              color: Colors.white,
-              child: _inputChat(),
-            )
-          ],
-        ),
+          ),
+          const Divider(height: 1),
+          Container(
+            color: Colors.white,
+            child: _inputChat(),
+          )
+        ],
       ),
     );
   }
@@ -145,17 +167,48 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     message = message.trim();
     if (message.isEmpty) return;
 
-    // TODO: Send message
-    print(message);
+    _addMessageToChatBody(authService.user!.uid, message);
 
+    socketService.socket.emit(Constants.MSG_PRIVATE, {
+      'from': authService.user!.uid,
+      'to': chatService.userTarget.uid,
+      'message': message,
+    });
+  }
+
+  void _addMessageToChatBody(String uid, String message,
+      {bool isPrecharged = false}) {
     final newMessage = ChatMessage(
+      uid: uid,
       message: message,
-      uid: '123',
       animationController: AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 300)),
+        vsync: this,
+        duration: Duration(milliseconds: !isPrecharged ? 300 : 0),
+      ),
     );
-    _messages.insert(0, newMessage);
-
+    if (isPrecharged) {
+      _messages.add(newMessage);
+    } else {
+      _messages.insert(0, newMessage);
+    }
     newMessage.animationController.forward();
+  }
+
+  _listenMessageFromServer(dynamic data) {
+    print('msg received $data');
+
+    // Verify that the message belongs to the current chat
+    if (data['from'] != chatService.userTarget.uid) return;
+
+    _addMessageToChatBody(data['from'], data['message']);
+  }
+
+  _loadHistory(String uidTarget) async {
+    List<Message> chat = await chatService.getChat(uidTarget);
+
+    for (Message m in chat) {
+      _addMessageToChatBody(m.from, m.message, isPrecharged: true);
+    }
+    setState(() {});
   }
 }

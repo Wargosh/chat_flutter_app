@@ -7,6 +7,7 @@ import 'package:chat_flutter_app/widgets/custom_button.dart';
 import 'package:chat_flutter_app/widgets/login_bottom.dart';
 
 import 'package:chat_flutter_app/services/auth_service.dart';
+import 'package:chat_flutter_app/services/socket_service.dart';
 import 'package:chat_flutter_app/helpers/show_alert.dart';
 
 class LoginPage extends StatelessWidget {
@@ -54,6 +55,7 @@ class __FormState extends State<_Form> {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
+    final socketService = Provider.of<SocketService>(context);
 
     return Container(
       margin: const EdgeInsets.only(top: 40),
@@ -86,8 +88,11 @@ class __FormState extends State<_Form> {
                       passController.text.trim(),
                     );
 
+                    if (!context.mounted) return;
+
                     if (result == 'OK') {
-                      //TODO: Connect to socket server
+                      socketService.connect();
+
                       Navigator.pushReplacementNamed(context, 'users');
                     } else {
                       showAlert(context, 'Atención', result);
